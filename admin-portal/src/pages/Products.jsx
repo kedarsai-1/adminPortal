@@ -1,0 +1,345 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { productService } from "../services/api";
+import { toast } from "sonner";
+
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  CircularProgress,
+} from "@mui/material";
+
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
+
+/* ---------- MODAL ---------- */
+
+function ProductModal({ open, product, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    name: "",
+    localName: "",
+    category: "vegetables",
+    unit: "kg",
+    pricing: { basePrice: 0, sellingPrice: 0 },
+  });
+
+  useEffect(() => {
+    setFormData(
+      product || {
+        name: "",
+        localName: "",
+        category: "vegetables",
+        unit: "kg",
+        pricing: { basePrice: 0, sellingPrice: 0 },
+      }
+    );
+  }, [product]);
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>
+        {product ? "Edit Product" : "Add Product"}
+      </DialogTitle>
+
+      <DialogContent>
+        <Grid container spacing={2} mt={1}>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Product Name"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Local Name"
+              value={formData.localName}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  localName: e.target.value,
+                })
+              }
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Select
+              fullWidth
+              value={formData.category}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  category: e.target.value,
+                })
+              }
+            >
+              <MenuItem value="vegetables">Vegetables</MenuItem>
+              <MenuItem value="fruits">Fruits</MenuItem>
+              <MenuItem value="grains">Grains</MenuItem>
+              <MenuItem value="pulses">Pulses</MenuItem>
+              <MenuItem value="spices">Spices</MenuItem>
+            </Select>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Select
+              fullWidth
+              value={formData.unit}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  unit: e.target.value,
+                })
+              }
+            >
+              <MenuItem value="kg">Kilogram</MenuItem>
+              <MenuItem value="gram">Gram</MenuItem>
+              <MenuItem value="liter">Liter</MenuItem>
+              <MenuItem value="piece">Piece</MenuItem>
+            </Select>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Base Price"
+              type="number"
+              value={formData.pricing.basePrice}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  pricing: {
+                    ...formData.pricing,
+                    basePrice: Number(e.target.value),
+                  },
+                })
+              }
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Selling Price"
+              type="number"
+              value={formData.pricing.sellingPrice}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  pricing: {
+                    ...formData.pricing,
+                    sellingPrice: Number(e.target.value),
+                  },
+                })
+              }
+            />
+          </Grid>
+        </Grid>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={() => onSave(formData)}>
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+/* ---------- PAGE ---------- */
+
+export default function Products() {
+  const queryClient = useQueryClient();
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["products", searchTerm, categoryFilter],
+    queryFn: async () => {
+      const res = await productService.getAll({
+        search: searchTerm,
+        category: categoryFilter,
+      });
+      return res.data?.data || [];
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: productService.create,
+    onSuccess: () => {
+      toast.success("Product created");
+      queryClient.invalidateQueries(["products"]);
+      setShowModal(false);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) =>
+      productService.update(id, data),
+    onSuccess: () => {
+      toast.success("Product updated");
+      queryClient.invalidateQueries(["products"]);
+      setShowModal(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: productService.delete,
+    onSuccess: () => {
+      toast.success("Product deleted");
+      queryClient.invalidateQueries(["products"]);
+    },
+  });
+
+  const handleSave = (formData) => {
+    if (selectedProduct) {
+      updateMutation.mutate({
+        id: selectedProduct._id,
+        data: formData,
+      });
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+
+  return (
+    <Box p={3}>
+      {/* HEADER */}
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        mb={4}
+      >
+        <Box>
+          <Typography variant="h4" fontWeight={700}>
+            Products
+          </Typography>
+          <Typography color="text.secondary">
+            Manage your product catalog
+          </Typography>
+        </Box>
+
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => {
+            setSelectedProduct(null);
+            setShowModal(true);
+          }}
+        >
+          Add Product
+        </Button>
+      </Stack>
+
+      {/* SEARCH */}
+      <Box mb={3}>
+        <TextField
+          fullWidth
+          placeholder="Search products..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </Box>
+
+      {/* GRID */}
+      <Grid container spacing={3}>
+        {isLoading ? (
+          <Grid item xs={12}>
+            <Stack alignItems="center">
+              <CircularProgress />
+            </Stack>
+          </Grid>
+        ) : products.length > 0 ? (
+          products.map((product) => (
+            <Grid item xs={12} sm={6} md={4} key={product._id}>
+              <Card sx={{ borderRadius: 3 }}>
+                <CardContent>
+                  <Stack direction="row" spacing={2}>
+                    <Inventory2Icon color="primary" />
+
+                    <Box>
+                      <Typography fontWeight={600}>
+                        {product.name}
+                      </Typography>
+                      <Typography variant="body2">
+                        {product.localName}
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Stack mt={2} spacing={1}>
+                    <Chip label={product.category} size="small" />
+                    <Typography fontWeight={600}>
+                      ₹{product.pricing?.sellingPrice || 0}
+                    </Typography>
+                  </Stack>
+
+                  <Stack direction="row" spacing={1} mt={2}>
+                    <Button
+                      size="small"
+                      startIcon={<EditIcon />}
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setShowModal(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      size="small"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() =>
+                        deleteMutation.mutate(product._id)
+                      }
+                    >
+                      Delete
+                    </Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))
+        ) : (
+          <Typography>No products found</Typography>
+        )}
+      </Grid>
+
+      <ProductModal
+        open={showModal}
+        product={selectedProduct}
+        onClose={() => {
+          setShowModal(false);
+          setSelectedProduct(null);
+        }}
+        onSave={handleSave}
+      />
+    </Box>
+  );
+}
