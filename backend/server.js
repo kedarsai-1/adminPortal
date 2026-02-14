@@ -60,11 +60,14 @@ const swaggerOptions = {
       description: 'Admin Portal API',
       
     },
-    servers: [
-      {
-        url: `http://localhost:${process.env.PORT || 5050}`,
-      }
-    ],
+   servers: [
+  {
+    url:
+      process.env.NODE_ENV === "production"
+        ? "https://adminportal-backend-oj1g.onrender.com"
+        : `http://localhost:${process.env.PORT || 5050}`,
+  }
+],
     components: {
       securitySchemes: {
         bearerAuth: {
