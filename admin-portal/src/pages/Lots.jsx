@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { lotService } from "../services/api";
 
 import {
   Box,
@@ -11,200 +13,197 @@ import {
   Stack,
   Paper,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import GavelIcon from "@mui/icons-material/Gavel";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import PersonIcon from "@mui/icons-material/Person";
-import Inventory2Icon from "@mui/icons-material/Inventory2";
+
+/* ---------------- CREATE LOT MODAL ---------------- */
+
+function CreateLotModal({ open, onClose, onCreate }) {
+  const [form, setForm] = useState({
+    productId: "",
+    productName: "",
+    sellerId: "",
+    sellerName: "",
+    quantityValue: "",
+    quantityUnit: "kg",
+    startingPrice: "",
+  });
+
+  const handleSubmit = () => {
+    const body = {
+      lotNumber: "LOT-" + Date.now(),
+      productId: form.productId,
+      productName: form.productName,
+      sellerId: form.sellerId,
+      sellerName: form.sellerName,
+      quantity: {
+        value: Number(form.quantityValue),
+        unit: form.quantityUnit,
+      },
+      startingPrice: Number(form.startingPrice),
+      auctionDate: new Date().toISOString(),
+      status: "active",
+    };
+
+    onCreate(body);
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Create Lot</DialogTitle>
+
+      <DialogContent>
+        <Stack spacing={2} mt={1}>
+          <TextField label="Product ID"
+            value={form.productId}
+            onChange={(e)=>setForm({...form,productId:e.target.value})}
+          />
+
+          <TextField label="Product Name"
+            value={form.productName}
+            onChange={(e)=>setForm({...form,productName:e.target.value})}
+          />
+
+          <TextField label="Seller ID"
+            value={form.sellerId}
+            onChange={(e)=>setForm({...form,sellerId:e.target.value})}
+          />
+
+          <TextField label="Seller Name"
+            value={form.sellerName}
+            onChange={(e)=>setForm({...form,sellerName:e.target.value})}
+          />
+
+          <TextField label="Quantity"
+            type="number"
+            value={form.quantityValue}
+            onChange={(e)=>setForm({...form,quantityValue:e.target.value})}
+          />
+
+          <TextField label="Starting Price"
+            type="number"
+            value={form.startingPrice}
+            onChange={(e)=>setForm({...form,startingPrice:e.target.value})}
+          />
+        </Stack>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={handleSubmit}>
+          Create
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+/* ---------------- PAGE ---------------- */
 
 export default function Lots() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const queryClient = useQueryClient();
 
-  const mockLots = [1, 2, 3, 4, 5];
+  const [searchTerm,setSearchTerm] = useState("");
+  const [openCreate,setOpenCreate] = useState(false);
 
-  const getStatus = (i) =>
-    i % 3 === 0 ? "Sold" : i % 3 === 1 ? "Active" : "Pending";
+  /* -------- FETCH LOTS -------- */
 
-  const getStatusColor = (status) =>
-    status === "Sold"
-      ? "success"
-      : status === "Active"
-      ? "warning"
-      : "primary";
+  const { data: lots = [] } = useQuery({
+    queryKey:["lots"],
+    queryFn: async ()=>{
+      const res = await lotService.getAll();
+      console.log("LOTS RESPONSE:", res.data);
+      return res.data?.data || [];
+    }
+  });
+
+  /* -------- CREATE -------- */
+
+  const createMutation = useMutation({
+    mutationFn: lotService.create,
+    onSuccess:()=>{
+      queryClient.invalidateQueries(["lots"]);
+      setOpenCreate(false);
+    }
+  });
+
+  const filteredLots = lots.filter(l =>
+    l.productName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <Box p={3}>
-      {/* HEADER */}
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={4}
-      >
-        <Box>
-          <Typography variant="h4" fontWeight={700}>
-            Auction Lots
-          </Typography>
-          <Typography color="text.secondary">
-            Manage auction lots and bidding
-          </Typography>
-        </Box>
+      <Stack direction="row" justifyContent="space-between" mb={4}>
+        <Typography variant="h4" fontWeight={700}>
+          Auction Lots
+        </Typography>
 
-        <Button variant="contained" startIcon={<AddIcon />}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon/>}
+          onClick={()=>setOpenCreate(true)}
+        >
           Create Lot
         </Button>
       </Stack>
 
-      {/* STATS */}
-      <Grid container spacing={3} mb={4}>
-        {["Total Lots", "Active", "Sold", "Pending"].map((stat, i) => (
-          <Grid item xs={12} sm={6} md={3} key={stat}>
-            <Card sx={{ borderRadius: 3 }}>
-              <CardContent>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {stat}
-                    </Typography>
-                    <Typography variant="h5" fontWeight={700}>
-                      {i * 23 + 45}
-                    </Typography>
-                  </Box>
+      <Paper sx={{p:3,borderRadius:3}}>
+        <TextField
+          fullWidth
+          placeholder="Search lots..."
+          value={searchTerm}
+          onChange={(e)=>setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment:<SearchIcon sx={{mr:1}}/>
+          }}
+        />
 
-                  <GavelIcon color="primary" />
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* SEARCH + LOTS LIST */}
-      <Paper sx={{ borderRadius: 3, p: 3 }}>
-        <Box mb={3}>
-          <TextField
-            fullWidth
-            placeholder="Search lots..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1 }} />,
-            }}
-          />
-        </Box>
-
-        <Stack spacing={2}>
-          {mockLots.map((i) => {
-            const status = getStatus(i);
-
-            return (
-              <Card
-                key={i}
-                sx={{
-                  borderRadius: 3,
-                  transition: "0.2s",
-                  "&:hover": {
-                    boxShadow: 6,
-                  },
-                }}
-              >
+        <Grid container spacing={3} mt={1}>
+          {filteredLots.map(lot=>(
+            <Grid item xs={12} md={6} key={lot._id}>
+              <Card sx={{borderRadius:3}}>
                 <CardContent>
-                  {/* TOP ROW */}
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    mb={2}
-                  >
+                  <Stack direction="row" justifyContent="space-between">
                     <Box>
                       <Typography fontWeight={600}>
-                        LOT-{1000 + i}
+                        {lot.productName}
                       </Typography>
 
-                      <Stack
-                        direction="row"
-                        spacing={3}
-                        mt={1}
-                        flexWrap="wrap"
-                      >
-                        <Stack direction="row" spacing={1}>
-                          <Inventory2Icon fontSize="small" />
-                          <Typography variant="body2">
-                            Tomatoes Grade A
-                          </Typography>
-                        </Stack>
+                      <Typography variant="body2">
+                        Qty: {lot.quantity?.value} {lot.quantity?.unit}
+                      </Typography>
 
-                        <Stack direction="row" spacing={1}>
-                          <PersonIcon fontSize="small" />
-                          <Typography variant="body2">
-                            Farmer: Raj Kumar
-                          </Typography>
-                        </Stack>
-
-                        <Stack direction="row" spacing={1}>
-                          <CalendarMonthIcon fontSize="small" />
-                          <Typography variant="body2">
-                            {new Date().toLocaleDateString()}
-                          </Typography>
-                        </Stack>
-                      </Stack>
+                      <Typography variant="body2">
+                        ₹{lot.startingPrice}
+                      </Typography>
                     </Box>
 
                     <Chip
-                      label={status}
-                      color={getStatusColor(status)}
+                      icon={<GavelIcon/>}
+                      label={lot.status}
+                      color="primary"
                       size="small"
                     />
                   </Stack>
-
-                  {/* DETAILS GRID */}
-                  <Grid container spacing={2}>
-                    <Grid item xs={6} md={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        Quantity
-                      </Typography>
-                      <Typography fontWeight={600}>
-                        {100 + i * 50} kg
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={6} md={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        Starting Price
-                      </Typography>
-                      <Typography fontWeight={600}>
-                        ₹{20 + i * 5}/kg
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={6} md={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        Current Bid
-                      </Typography>
-                      <Typography fontWeight={600} color="primary.main">
-                        ₹{25 + i * 5}/kg
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={6} md={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        Commission
-                      </Typography>
-                      <Typography fontWeight={600}>2.5%</Typography>
-                    </Grid>
-                  </Grid>
                 </CardContent>
               </Card>
-            );
-          })}
-        </Stack>
+            </Grid>
+          ))}
+        </Grid>
       </Paper>
+
+      <CreateLotModal
+        open={openCreate}
+        onClose={()=>setOpenCreate(false)}
+        onCreate={(data)=>createMutation.mutate(data)}
+      />
     </Box>
   );
 }

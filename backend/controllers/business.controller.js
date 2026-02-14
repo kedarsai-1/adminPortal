@@ -3,20 +3,29 @@ const Business = require('../models/Business.model');
 // GET /api/businesses
 exports.getBusinesses = async (req, res) => {
   try {
-    const businesses = await Business.find({
-      ownerId: req.user._id,
-      status: { $ne: 'inactive' }
-    }).sort({ createdAt: -1 });
+
+    let query = {
+      status: { $ne: "inactive" }
+    };
+
+    // ⭐ ADMIN CAN SEE ALL BUSINESSES
+    if (req.user.role !== "admin") {
+      query.ownerId = req.user._id;
+    }
+
+    const businesses = await Business.find(query)
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
       count: businesses.length,
       data: businesses
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch businesses',
+      message: "Failed to fetch businesses",
       error: error.message
     });
   }

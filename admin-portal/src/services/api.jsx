@@ -43,6 +43,9 @@ export const businessService = {
 
 /* -------------------- PRODUCTS -------------------- */
 export const productService = {
+  create: (data) => api.post("/products", data),
+update: (id, data) => api.put(`/products/${id}`, data),
+delete: (id) => api.delete(`/products/${id}`),
   getAll: () => api.get('/products'),
 };
 
@@ -53,6 +56,15 @@ export const priceService = {
   update: (id, data) => api.put(`/prices/${id}`, data),
   remove: (id) => api.delete(`/prices/${id}`),
 };
+/* -------------------- LOTS -------------------- */
+export const lotService = {
+  getAll: () => api.get('/lots'),
+  getById: (id) => api.get(`/lots/${id}`),
+  create: (data) => api.post('/lots', data),
+  update: (id, data) => api.put(`/lots/${id}`, data),
+  delete: (id) => api.delete(`/lots/${id}`),
+};
+
 
 /* -------------------- ANALYTICS (mock) -------------------- */
 export const analyticsService = {

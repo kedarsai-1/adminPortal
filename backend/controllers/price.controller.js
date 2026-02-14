@@ -5,13 +5,22 @@ exports.getPrices = async (req, res) => {
   try {
     const { productId, marketId, date } = req.query;
 
-    const query = {};
+    // ⭐ BASE QUERY
+    let query = {};
+
+    // ⭐ ADMIN vs USER LOGIC
+    if (req.user.role !== "admin") {
+      query.businessId = req.user.businessId || req.user._id;
+    }
+
+    // ⭐ FILTERS
     if (productId) query.productId = productId;
     if (marketId) query.marketId = marketId;
+
     if (date) {
       query.date = {
         $gte: new Date(date),
-        $lte: new Date(date + 'T23:59:59.999Z')
+        $lte: new Date(date + "T23:59:59.999Z")
       };
     }
 
@@ -22,20 +31,23 @@ exports.getPrices = async (req, res) => {
       count: prices.length,
       data: prices
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch prices',
+      message: "Failed to fetch prices",
       error: error.message
     });
   }
 };
+
 
 // POST /api/prices
 exports.createPrice = async (req, res) => {
   try {
     const price = await Price.create({
       ...req.body,
+       businessId: req.user.businessId || req.user._id,
       marketId: req.body.marketId || req.user.businessId
     });
 

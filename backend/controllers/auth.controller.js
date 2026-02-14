@@ -8,7 +8,7 @@ const generateToken = (id) =>
 
 const register = asyncHandler(async (req, res) => {
     console.log('REGISTER BODY:', req.body);
-  const { name, email, password } = req.body;
+  const { name, email, password, role  } = req.body;  // ✅ DEFAULT VALUE
 
   if (!name || !email || !password) {
     return res.status(400).json({
@@ -24,7 +24,7 @@ const register = asyncHandler(async (req, res) => {
     });
   }
 
-  const user = await User.create({ name, email, password });
+  const user = await User.create({ name, email, password,role:role || "buyer" });
   const token = generateToken(user._id);
 
   res.status(201).json({
@@ -33,7 +33,8 @@ const register = asyncHandler(async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role || "buyer"
       },
       token
     }

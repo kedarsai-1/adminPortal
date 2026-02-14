@@ -4,12 +4,12 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require("swagger-ui-express");
+const swaggerJsdoc = require("swagger-jsdoc");
+
 console.log('🔥 THIS IS THE ACTIVE SERVER INSTANCE 🔥');
 
-// Import routes
+// ROUTES
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const businessRoutes = require('./routes/business.routes.js');
@@ -21,65 +21,47 @@ const ledgerRoutes = require('./routes/ledger.routes');
 const inventoryRoutes = require('./routes/inventory.routes');
 const serviceRoutes = require('./routes/service.routes');
 
-
-// Import middleware
+// ERROR HANDLER
 const errorHandler = require('./middleware/error.middleware');
 
-
 const app = express();
-app.use((req, res, next) => {
-  console.log('🔥 HIT SERVER:', req.method, req.originalUrl);
-  next();
-});
 
-
-// Security middleware
+/* ---------------- SECURITY ---------------- */
 app.use(helmet());
 
-// CORS configuration
+/* ---------------- CORS ---------------- */
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true
 }));
+
+/* ---------------- BODY PARSER ---------------- */
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/* ---------------- LOGGER ---------------- */
 app.use((req, res, next) => {
   console.log('➡️ Incoming:', req.method, req.originalUrl);
   next();
 });
-app.use(express.urlencoded({ extended: true }));
 
-
-
-
-// Body parser middleware
-
-
-// Logging middleware
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Rate limiting
-//
-//app.use('/api/', limiter);
-
-// Swagger documentation
+/* ---------------- SWAGGER SETUP ---------------- */
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'Reco Ecosystem API',
       version: '1.0.0',
-      description: 'Admin Portal API for Recodesk and Recotrace',
-      contact: {
-        name: 'Reco Team',
-        email: 'support@reco.com'
-      }
+      description: 'Admin Portal API',
+      
     },
     servers: [
       {
-        url: `http://localhost:${process.env.PORT || 5000}`,
-        description: 'Development server'
+        url: `http://localhost:${process.env.PORT || 5050}`,
       }
     ],
     components: {
@@ -91,27 +73,31 @@ const swaggerOptions = {
         }
       }
     },
-    security: [{
-      bearerAuth: []
-    }]
+    security: [{ bearerAuth: [] }]
   },
-  apis: ['./routes/*.js', './models/*.js']
+  apis: ['./routes/*.js'],
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Health check
+/* ✅ ADD SWAGGER ONLY AFTER INITIALIZATION */
+app.get("/api-docs-json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerDocs);
+});
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+
+/* ---------------- HEALTH CHECK ---------------- */
 app.get('/health', (req, res) => {
-  res.status(200).json({
+  res.json({
     success: true,
-    message: 'Reco API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    message: 'Reco API running',
+    timestamp: new Date().toISOString()
   });
 });
 
-// API routes
+/* ---------------- API ROUTES ---------------- */
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/businesses', businessRoutes);
@@ -123,8 +109,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/prices', priceRoutes);
 app.use('/api/services', serviceRoutes);
 
-
-// 404 handler
+/* ---------------- 404 ---------------- */
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -132,31 +117,27 @@ app.use((req, res) => {
   });
 });
 
-// Error handling middleware
+/* ---------------- ERROR HANDLER ---------------- */
 app.use(errorHandler);
 
-// Database connection
+/* ---------------- DB + SERVER ---------------- */
+/* ---------------- DB + SERVER ---------------- */
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
-    console.log('MongoDB connected successfully');
-  
-    // Start server
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-      console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
-    });
+    console.log('✅ MongoDB connected');
+
+    // 🚀 DO NOT START SERVER DURING TESTS
+    if (process.env.NODE_ENV !== "test") {
+      const PORT = process.env.PORT || 5050;
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on ${PORT}`);
+        console.log(`📚 Swagger: http://localhost:${PORT}/api-docs`);
+      });
+    }
   })
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err.message);
+  .catch(err => {
+    console.error('❌ DB Error:', err.message);
     process.exit(1);
   });
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Promise Rejection:', err);
-  process.exit(1);
-});
 
 module.exports = app;

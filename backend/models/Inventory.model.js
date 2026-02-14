@@ -63,11 +63,11 @@ const inventorySchema = new mongoose.Schema({
     },
     previousStock: {
       type: Number,
-      required: true
+    
     },
     newStock: {
       type: Number,
-      required: true
+      
     },
     rate: Number,
     totalValue: Number,
@@ -118,15 +118,11 @@ inventorySchema.index({ status: 1 });
 
 // Update status based on stock levels
 inventorySchema.pre('save', function(next) {
-  if (this.currentStock <= 0) {
-    this.status = 'out_of_stock';
-  } else if (this.currentStock <= this.reorderLevel) {
-    this.status = 'low_stock';
-  } else {
-    this.status = 'in_stock';
-  }
-  next();
+  if (this.currentStock <= 0) this.status = 'out_of_stock';
+  else if (this.currentStock <= this.reorderLevel) this.status = 'low_stock';
+  else this.status = 'in_stock';
 });
+
 
 // Method to add stock movement
 inventorySchema.methods.addMovement = function(movementData) {

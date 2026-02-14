@@ -3,33 +3,40 @@ const Lot = require('../models/Lot.model');
 // GET /api/lots
 exports.getLots = async (req, res) => {
   try {
-    const lots = await Lot.find({
-      businessId: req.user.businessId
-    })
+    let query = {};
+
+    // ⭐ ADMIN sees ALL lots
+    if (req.user.role !== "admin") {
+      query.businessId = req.user.businessId || req.user._id;
+    }
+
+    const lots = await Lot.find(query)
       .sort({ auctionDate: -1 })
-      .populate('sellerId', 'name')
-      .populate('productId', 'name');
+      .populate("sellerId", "name")
+      .populate("productId", "name");
 
     res.json({
       success: true,
       count: lots.length,
       data: lots
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch lots',
+      message: "Failed to fetch lots",
       error: error.message
     });
   }
 };
+
 
 // POST /api/lots
 exports.createLot = async (req, res) => {
   try {
     const lot = await Lot.create({
       ...req.body,
-      businessId: req.user.businessId,
+      businessId: req.user.businessId || req.user._id, // ⭐ FIX
       createdBy: req.user._id
     });
 
@@ -47,12 +54,13 @@ exports.createLot = async (req, res) => {
   }
 };
 
+
 // GET /api/lots/:id
 exports.getLotById = async (req, res) => {
   try {
     const lot = await Lot.findOne({
       _id: req.params.id,
-      businessId: req.user.businessId
+      businessId: req.user.businessId || req.user._id // ⭐ FIX
     })
       .populate('sellerId', 'name')
       .populate('productId', 'name')
@@ -84,7 +92,7 @@ exports.updateLot = async (req, res) => {
     const lot = await Lot.findOneAndUpdate(
       {
         _id: req.params.id,
-        businessId: req.user.businessId
+        businessId: req.user.businessId || req.user._id // ⭐ FIX
       },
       req.body,
       { new: true, runValidators: true }
@@ -117,7 +125,7 @@ exports.deleteLot = async (req, res) => {
     const lot = await Lot.findOneAndUpdate(
       {
         _id: req.params.id,
-        businessId: req.user.businessId
+        businessId: req.user.businessId || req.user._id // ⭐ FIX
       },
       { status: 'cancelled' },
       { new: true }

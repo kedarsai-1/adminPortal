@@ -178,9 +178,8 @@ invoiceSchema.index({ customerId: 1 });
 invoiceSchema.index({ paymentStatus: 1 });
 
 // Calculate balance before saving
-invoiceSchema.pre('save', function(next) {
+invoiceSchema.pre('save', async function () {
   this.balanceAmount = this.grandTotal - this.paidAmount;
-  next();
 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

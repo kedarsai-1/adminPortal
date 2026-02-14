@@ -11,27 +11,33 @@ exports.getServices = async (req, res) => {
 
     const query = {};
 
+    // ⭐ ADMIN can see ALL services
+    if (req.user.role !== "admin") {
+      query.businessId = req.user.businessId || req.user._id;
+    }
+
     if (serviceType) query.serviceType = serviceType;
     if (status) query.status = status;
     if (providerId) query.providerId = providerId;
 
     const services = await Service.find(query)
       .sort({ createdAt: -1 })
-      .populate('providerId', 'name phone');
+      .populate("providerId", "name phone");
 
     res.json({
       success: true,
       count: services.length,
-      data: services
+      data: services,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch services',
-      error: error.message
+      message: "Failed to fetch services",
+      error: error.message,
     });
   }
 };
+
 
 /**
  * @desc    Create service

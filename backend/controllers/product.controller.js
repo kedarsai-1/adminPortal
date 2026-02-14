@@ -3,17 +3,12 @@ const Product = require('../models/Product.model');
 // GET /api/products
 exports.getProducts = async (req, res) => {
   try {
-    const { search, category, status } = req.query;
 
-    const query = {
-      businessId: req.user.businessId
-    };
+    let query = {};
 
-    if (category) query.category = category;
-    if (status) query.status = status;
-
-    if (search) {
-      query.$text = { $search: search };
+    // ✅ ADMIN sees everything
+    if (req.user.role !== "admin") {
+      query.businessId = req.user.businessId || req.user._id;
     }
 
     const products = await Product.find(query).sort({ createdAt: -1 });
@@ -23,21 +18,23 @@ exports.getProducts = async (req, res) => {
       count: products.length,
       data: products
     });
+
   } catch (error) {
     res.status(500).json({
-      success: false,
-      message: 'Failed to fetch products',
-      error: error.message
+      success:false,
+      message:"Failed to fetch products",
+      error:error.message
     });
   }
 };
+
 
 // POST /api/products
 exports.createProduct = async (req, res) => {
   try {
     const product = await Product.create({
       ...req.body,
-      businessId: req.user.businessId,
+      businessId: req.user.businessId || req.user._id, // ⭐ FIX
       createdBy: req.user._id
     });
 
@@ -89,28 +86,32 @@ exports.updateProduct = async (req, res) => {
     const product = await Product.findOneAndUpdate(
       {
         _id: req.params.id,
-        businessId: req.user.businessId
+        businessId: req.user.businessId || req.user._id // ⭐ FIX
       },
       req.body,
-      { new: true, runValidators: true }
+      {
+        returnDocument: "after",   // ✅ NEW SYNTAX (replaces new:true)
+        runValidators: true
+      }
     );
 
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: "Product not found"
       });
     }
 
     res.json({
       success: true,
-      message: 'Product updated successfully',
+      message: "Product updated successfully",
       data: product
     });
+
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: 'Product update failed',
+      message: "Product update failed",
       error: error.message
     });
   }
@@ -119,31 +120,32 @@ exports.updateProduct = async (req, res) => {
 // DELETE /api/products/:id (Soft delete)
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        businessId: req.user.businessId
-      },
-      { status: 'inactive' },
-      { new: true }
+
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { status: "inactive" },
+      { returnDocument: "after" }
     );
 
     if (!product) {
       return res.status(404).json({
-        success: false,
-        message: 'Product not found'
+        success:false,
+        message:"Product not found"
       });
     }
 
     res.json({
-      success: true,
-      message: 'Product deleted successfully'
+      success:true,
+      message:"Product deleted successfully",
+      data:product
     });
+
   } catch (error) {
     res.status(500).json({
-      success: false,
-      message: 'Product deletion failed',
-      error: error.message
+      success:false,
+      message:"Product deletion failed",
+      error:error.message
     });
   }
 };
+

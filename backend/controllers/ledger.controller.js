@@ -3,31 +3,41 @@ const Ledger = require('../models/Ledger.model');
 // GET /api/ledgers
 exports.getLedgers = async (req, res) => {
   try {
-    const ledgers = await Ledger.find({
-      businessId: req.user.businessId,
-      status: { $ne: 'inactive' }
-    }).sort({ createdAt: -1 });
+
+    let query = {
+      status: { $ne: "inactive" }
+    };
+
+    // ⭐ Normal users → only their business
+    if (req.user.role !== "admin") {
+      query.businessId = req.user.businessId || req.user._id;
+    }
+
+    const ledgers = await Ledger.find(query)
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
       count: ledgers.length,
       data: ledgers
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch ledgers',
+      message: "Failed to fetch ledgers",
       error: error.message
     });
   }
 };
+
 
 // POST /api/ledgers
 exports.createLedger = async (req, res) => {
   try {
     const ledger = await Ledger.create({
       ...req.body,
-      businessId: req.user.businessId
+      businessId: req.user.businessId || req.user._id
     });
 
     res.status(201).json({
@@ -49,7 +59,7 @@ exports.getLedgerById = async (req, res) => {
   try {
     const ledger = await Ledger.findOne({
       _id: req.params.id,
-      businessId: req.user.businessId
+      businessId: req.user.businessId || req.user._id
     });
 
     if (!ledger) {
@@ -78,7 +88,7 @@ exports.updateLedger = async (req, res) => {
     const ledger = await Ledger.findOneAndUpdate(
       {
         _id: req.params.id,
-        businessId: req.user.businessId
+        businessId: req.user.businessId || req.user._id
       },
       req.body,
       { new: true, runValidators: true }
@@ -111,7 +121,7 @@ exports.deleteLedger = async (req, res) => {
     const ledger = await Ledger.findOneAndUpdate(
       {
         _id: req.params.id,
-        businessId: req.user.businessId
+        businessId: req.user.businessId || req.user._id
       },
       { status: 'inactive' },
       { new: true }

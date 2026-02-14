@@ -10,8 +10,10 @@ exports.getInvoices = async (req, res) => {
     const { invoiceType, paymentStatus, startDate, endDate } = req.query;
 
     const query = {
-      businessId: req.user.businessId
     };
+    if (req.user.role !== "admin") {
+      query.businessId = req.user.businessId || req.user._id;
+    }
 
     if (invoiceType) query.invoiceType = invoiceType;
     if (paymentStatus) query.paymentStatus = paymentStatus;
@@ -50,7 +52,7 @@ exports.createInvoice = async (req, res) => {
   try {
     const invoice = await Invoice.create({
       ...req.body,
-      businessId: req.user.businessId,
+      businessId: req.user.businessId || req.user._id,
       createdBy: req.user._id
     });
 
@@ -77,7 +79,7 @@ exports.getInvoiceById = async (req, res) => {
   try {
     const invoice = await Invoice.findOne({
       _id: req.params.id,
-      businessId: req.user.businessId
+      businessId: req.user.businessId || req.user._id
     })
       .populate('customerId', 'name')
       .populate('items.productId', 'name')
@@ -113,7 +115,7 @@ exports.updateInvoice = async (req, res) => {
     const invoice = await Invoice.findOneAndUpdate(
       {
         _id: req.params.id,
-        businessId: req.user.businessId
+        businessId: req.user.businessId || req.user._id
       },
       req.body,
       { new: true, runValidators: true }
@@ -151,7 +153,7 @@ exports.addPayment = async (req, res) => {
 
     const invoice = await Invoice.findOne({
       _id: req.params.id,
-      businessId: req.user.businessId
+      businessId: req.user.businessId || req.user._id
     });
 
     if (!invoice) {
@@ -199,7 +201,7 @@ exports.deleteInvoice = async (req, res) => {
   try {
     const invoice = await Invoice.findOneAndDelete({
       _id: req.params.id,
-      businessId: req.user.businessId
+      businessId: req.user.businessId || req.user._id
     });
 
     if (!invoice) {

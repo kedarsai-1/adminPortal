@@ -27,7 +27,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 
-/* ---------- MODAL ---------- */
+/* ===================== MODAL ===================== */
 
 function ProductModal({ open, product, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -50,6 +50,15 @@ function ProductModal({ open, product, onClose, onSave }) {
     );
   }, [product]);
 
+  const handleSubmit = () => {
+    if (!formData.name) {
+      toast.error("Product name required");
+      return;
+    }
+
+    onSave(formData);
+  };
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>
@@ -57,110 +66,83 @@ function ProductModal({ open, product, onClose, onSave }) {
       </DialogTitle>
 
       <DialogContent>
-        <Grid container spacing={2} mt={1}>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Product Name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-            />
-          </Grid>
+        <Stack spacing={2} mt={1}>
+          <TextField
+            label="Product Name"
+            value={formData.name}
+            onChange={(e) =>
+              setFormData({ ...formData, name: e.target.value })
+            }
+          />
 
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Local Name"
-              value={formData.localName}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  localName: e.target.value,
-                })
-              }
-            />
-          </Grid>
+          <TextField
+            label="Local Name"
+            value={formData.localName}
+            onChange={(e) =>
+              setFormData({ ...formData, localName: e.target.value })
+            }
+          />
 
-          <Grid item xs={12} md={6}>
-            <Select
-              fullWidth
-              value={formData.category}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  category: e.target.value,
-                })
-              }
-            >
-              <MenuItem value="vegetables">Vegetables</MenuItem>
-              <MenuItem value="fruits">Fruits</MenuItem>
-              <MenuItem value="grains">Grains</MenuItem>
-              <MenuItem value="pulses">Pulses</MenuItem>
-              <MenuItem value="spices">Spices</MenuItem>
-            </Select>
-          </Grid>
+          <Select
+            value={formData.category}
+            onChange={(e) =>
+              setFormData({ ...formData, category: e.target.value })
+            }
+          >
+            <MenuItem value="vegetables">Vegetables</MenuItem>
+            <MenuItem value="fruits">Fruits</MenuItem>
+            <MenuItem value="grains">Grains</MenuItem>
+            <MenuItem value="pulses">Pulses</MenuItem>
+            <MenuItem value="spices">Spices</MenuItem>
+          </Select>
 
-          <Grid item xs={12} md={6}>
-            <Select
-              fullWidth
-              value={formData.unit}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  unit: e.target.value,
-                })
-              }
-            >
-              <MenuItem value="kg">Kilogram</MenuItem>
-              <MenuItem value="gram">Gram</MenuItem>
-              <MenuItem value="liter">Liter</MenuItem>
-              <MenuItem value="piece">Piece</MenuItem>
-            </Select>
-          </Grid>
+          <Select
+            value={formData.unit}
+            onChange={(e) =>
+              setFormData({ ...formData, unit: e.target.value })
+            }
+          >
+            <MenuItem value="kg">Kg</MenuItem>
+            <MenuItem value="gram">Gram</MenuItem>
+            <MenuItem value="liter">Liter</MenuItem>
+            <MenuItem value="piece">Piece</MenuItem>
+          </Select>
 
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Base Price"
-              type="number"
-              value={formData.pricing.basePrice}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  pricing: {
-                    ...formData.pricing,
-                    basePrice: Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </Grid>
+          <TextField
+            label="Base Price"
+            type="number"
+            value={formData.pricing.basePrice}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                pricing: {
+                  ...formData.pricing,
+                  basePrice: Number(e.target.value),
+                },
+              })
+            }
+          />
 
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Selling Price"
-              type="number"
-              value={formData.pricing.sellingPrice}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  pricing: {
-                    ...formData.pricing,
-                    sellingPrice: Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </Grid>
-        </Grid>
+          <TextField
+            label="Selling Price"
+            type="number"
+            value={formData.pricing.sellingPrice}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                pricing: {
+                  ...formData.pricing,
+                  sellingPrice: Number(e.target.value),
+                },
+              })
+            }
+          />
+        </Stack>
       </DialogContent>
 
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={() => onSave(formData)}>
+        <Button variant="contained" onClick={handleSubmit}>
           Save
         </Button>
       </DialogActions>
@@ -168,26 +150,25 @@ function ProductModal({ open, product, onClose, onSave }) {
   );
 }
 
-/* ---------- PAGE ---------- */
+/* ===================== PAGE ===================== */
 
 export default function Products() {
   const queryClient = useQueryClient();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  /* ---------- FETCH ---------- */
+
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products", searchTerm, categoryFilter],
+    queryKey: ["products"],
     queryFn: async () => {
-      const res = await productService.getAll({
-        search: searchTerm,
-        category: categoryFilter,
-      });
+      const res = await productService.getAll();
       return res.data?.data || [];
     },
   });
+
+  /* ---------- CREATE ---------- */
 
   const createMutation = useMutation({
     mutationFn: productService.create,
@@ -196,7 +177,13 @@ export default function Products() {
       queryClient.invalidateQueries(["products"]);
       setShowModal(false);
     },
+    onError: (err) => {
+      console.log("CREATE ERROR", err.response?.data);
+      toast.error(err.response?.data?.message || "Create failed");
+    },
   });
+
+  /* ---------- UPDATE ---------- */
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) =>
@@ -208,8 +195,10 @@ export default function Products() {
     },
   });
 
+  /* ---------- DELETE ---------- */
+
   const deleteMutation = useMutation({
-    mutationFn: productService.delete,
+    mutationFn: (id) => productService.delete(id),
     onSuccess: () => {
       toast.success("Product deleted");
       queryClient.invalidateQueries(["products"]);
@@ -230,17 +219,10 @@ export default function Products() {
   return (
     <Box p={3}>
       {/* HEADER */}
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        mb={4}
-      >
+      <Stack direction="row" justifyContent="space-between" mb={4}>
         <Box>
           <Typography variant="h4" fontWeight={700}>
             Products
-          </Typography>
-          <Typography color="text.secondary">
-            Manage your product catalog
           </Typography>
         </Box>
 
@@ -256,24 +238,10 @@ export default function Products() {
         </Button>
       </Stack>
 
-      {/* SEARCH */}
-      <Box mb={3}>
-        <TextField
-          fullWidth
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </Box>
-
       {/* GRID */}
       <Grid container spacing={3}>
         {isLoading ? (
-          <Grid item xs={12}>
-            <Stack alignItems="center">
-              <CircularProgress />
-            </Stack>
-          </Grid>
+          <CircularProgress />
         ) : products.length > 0 ? (
           products.map((product) => (
             <Grid item xs={12} sm={6} md={4} key={product._id}>
@@ -331,6 +299,7 @@ export default function Products() {
         )}
       </Grid>
 
+      {/* MODAL */}
       <ProductModal
         open={showModal}
         product={selectedProduct}
