@@ -57,7 +57,6 @@ exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findOne({
       _id: req.params.id,
-      businessId: req.user.businessId
     });
 
     if (!product) {
