@@ -65,7 +65,6 @@ exports.createPrice = async (req, res) => {
   }
 };
 
-// GET /api/prices/:id
 exports.getPriceById = async (req, res) => {
   try {
     const price = await Price.findById(req.params.id);
@@ -74,6 +73,16 @@ exports.getPriceById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Price record not found'
+      });
+    }
+
+    const userMarketId = (req.user.businessId || req.user._id)?.toString();
+    const priceMarketId = (price.marketId || price.businessId)?.toString();
+
+    if (priceMarketId && userMarketId && priceMarketId !== userMarketId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view this price'
       });
     }
 
@@ -89,7 +98,6 @@ exports.getPriceById = async (req, res) => {
     });
   }
 };
-
 // PUT /api/prices/:id
 exports.updatePrice = async (req, res) => {
   try {
