@@ -6,27 +6,16 @@ const Price = require('../models/Price.model');
 // ==================================================
 exports.getPrices = async (req, res) => {
   try {
-    const { productId, marketId, date } = req.query;
+    const { productId, date } = req.query;
+
     const query = {};
 
-    // 🔐 NON-ADMIN: restrict to user's market
+    // 🔐 Non-admin → only their market
     if (req.user.role !== "admin") {
-      if (!req.user.businessId) {
-        return res.status(403).json({
-          success: false,
-          message: "User is not linked to a market"
-        });
-      }
-      query.marketId = req.user.businessId;
+      query.marketId = req.user.businessId || req.user._id;
     }
 
-    // 🔍 FILTERS
     if (productId) query.productId = productId;
-
-    // Admins may explicitly filter by market
-    if (req.user.role === "admin" && marketId) {
-      query.marketId = marketId;
-    }
 
     if (date) {
       query.date = {
@@ -53,34 +42,18 @@ exports.getPrices = async (req, res) => {
 };
 
 
+
 // ==================================================
 // POST /api/prices
 // ==================================================
 exports.createPrice = async (req, res) => {
   try {
-    let marketId;
-
-    if (req.user.role === "admin") {
-      if (!req.body.marketId) {
-        return res.status(400).json({
-          success: false,
-          message: "marketId is required for admin"
-        });
-      }
-      marketId = req.body.marketId;
-    } else {
-      if (!req.user.businessId) {
-        return res.status(403).json({
-          success: false,
-          message: "User is not linked to a market"
-        });
-      }
-      marketId = req.user.businessId;
-    }
-
     const price = await Price.create({
       ...req.body,
-      marketId
+
+      // ⭐ MARKET = BUSINESS (source of truth)
+      marketId: req.user.businessId || req.user._id,
+      marketName: req.user.businessName || undefined
     });
 
     res.status(201).json({
@@ -104,35 +77,18 @@ exports.createPrice = async (req, res) => {
 // ==================================================
 exports.getPriceById = async (req, res) => {
   try {
-    const price = await Price.findById(req.params.id);
+    const query = { _id: req.params.id };
+
+    if (req.user.role !== "admin") {
+      query.marketId = req.user.businessId || req.user._id;
+    }
+
+    const price = await Price.findOne(query);
 
     if (!price) {
       return res.status(404).json({
         success: false,
         message: "Price record not found"
-      });
-    }
-
-    // 🔓 Admin can access any price
-    if (req.user.role === "admin") {
-      return res.json({
-        success: true,
-        data: price
-      });
-    }
-
-    // 🔐 Non-admin authorization
-    if (!req.user.businessId) {
-      return res.status(403).json({
-        success: false,
-        message: "User is not linked to a market"
-      });
-    }
-
-    if (price.marketId.toString() !== req.user.businessId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to view this price"
       });
     }
 
@@ -151,12 +107,22 @@ exports.getPriceById = async (req, res) => {
 };
 
 
+
 // ==================================================
 // PUT /api/prices/:id
 // ==================================================
 exports.updatePrice = async (req, res) => {
   try {
-    const price = await Price.findById(req.params.id);
+    delete req.body.marketId; // 🔐 protect ownership
+
+    const price = await Price.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        marketId: req.user.businessId || req.user._id
+      },
+      req.body,
+      { new: true, runValidators: true }
+    );
 
     if (!price) {
       return res.status(404).json({
@@ -165,33 +131,10 @@ exports.updatePrice = async (req, res) => {
       });
     }
 
-    // 🔓 Admin allowed
-    if (req.user.role !== "admin") {
-      if (!req.user.businessId) {
-        return res.status(403).json({
-          success: false,
-          message: "User is not linked to a market"
-        });
-      }
-
-      if (price.marketId.toString() !== req.user.businessId.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "Not authorized to update this price"
-        });
-      }
-    }
-
-    const updatedPrice = await Price.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
     res.json({
       success: true,
       message: "Price updated successfully",
-      data: updatedPrice
+      data: price
     });
 
   } catch (error) {
@@ -209,7 +152,10 @@ exports.updatePrice = async (req, res) => {
 // ==================================================
 exports.deletePrice = async (req, res) => {
   try {
-    const price = await Price.findById(req.params.id);
+    const price = await Price.findOneAndDelete({
+      _id: req.params.id,
+      marketId: req.user.businessId || req.user._id
+    });
 
     if (!price) {
       return res.status(404).json({
@@ -217,25 +163,6 @@ exports.deletePrice = async (req, res) => {
         message: "Price record not found"
       });
     }
-
-    // 🔓 Admin allowed
-    if (req.user.role !== "admin") {
-      if (!req.user.businessId) {
-        return res.status(403).json({
-          success: false,
-          message: "User is not linked to a market"
-        });
-      }
-
-      if (price.marketId.toString() !== req.user.businessId.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "Not authorized to delete this price"
-        });
-      }
-    }
-
-    await price.deleteOne();
 
     res.json({
       success: true,
