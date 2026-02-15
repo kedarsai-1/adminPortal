@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const validator = require('validator');
 
 /**
  * @swagger
@@ -40,13 +41,13 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
-  },
+  type: String,
+  required: [true, 'Email is required'],
+  unique: true,
+  lowercase: true,
+  trim: true,
+  validate: [validator.isEmail, 'Please provide a valid email']
+},
   password: {
     type: String,
     required: [true, 'Password is required'],

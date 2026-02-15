@@ -20,6 +20,7 @@ const invoiceRoutes = require('./routes/invoice.routes');
 const ledgerRoutes = require('./routes/ledger.routes');
 const inventoryRoutes = require('./routes/inventory.routes');
 const serviceRoutes = require('./routes/service.routes');
+const analysisRoutes = require('./routes/analysis.routes');
 
 // ERROR HANDLER
 const errorHandler = require('./middleware/error.middleware');
@@ -112,6 +113,7 @@ app.use('/api/ledgers', ledgerRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/prices', priceRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/analysis', analysisRoutes);
 
 /* ---------------- 404 ---------------- */
 app.use((req, res) => {
