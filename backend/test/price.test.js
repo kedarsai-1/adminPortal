@@ -6,6 +6,7 @@ describe("Prices API", () => {
 
   let token;
   let createdPriceId;
+  let marketId;
 
   /* ------------------------------------------------ */
   /* LOGIN FIRST                                      */
@@ -14,11 +15,12 @@ describe("Prices API", () => {
     const loginRes = await request(app)
       .post("/api/auth/login")
       .send({
-        email: "admin@test.com",   // ⭐ use your real test admin login
+        email: "admin@test.com",
         password: "123456"
       });
 
     token = loginRes.body.data.token;
+    marketId = new mongoose.Types.ObjectId(); // ✅ fake market
   }, 15000);
 
   /* ------------------------------------------------ */
@@ -32,14 +34,13 @@ describe("Prices API", () => {
       .send({
         productId: new mongoose.Types.ObjectId(),
         productName: "Tomato",
+        marketId,                     // ✅ REQUIRED
         unit: "kg",
-
         prices: {
           min: 20,
           max: 30,
           average: 25
         },
-
         date: new Date()
       });
 
@@ -106,6 +107,13 @@ describe("Prices API", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  /* ------------------------------------------------ */
+  /* CLEANUP                                          */
+  /* ------------------------------------------------ */
+  afterAll(async () => {
+    await mongoose.connection.close(); // ✅ prevents Jest hanging
   });
 
 });

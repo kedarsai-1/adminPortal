@@ -12,7 +12,9 @@ const priceSchema = new mongoose.Schema({
   },
   marketId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Business'
+    ref: 'Business',
+    required: true,
+    index: true
   },
   marketName: {
     type: String
@@ -23,30 +25,17 @@ const priceSchema = new mongoose.Schema({
     default: Date.now
   },
   prices: {
-    min: {
-      type: Number,
-      required: true
-    },
-    max: {
-      type: Number,
-      required: true
-    },
-    average: {
-      type: Number,
-      required: true
-    },
+    min: { type: Number, required: true },
+    max: { type: Number, required: true },
+    average: { type: Number, required: true },
     modal: Number
   },
   unit: {
     type: String,
     required: true
   },
-  grade: {
-    type: String
-  },
-  quality: {
-    type: String
-  },
+  grade: String,
+  quality: String,
   arrivals: {
     quantity: Number,
     unit: String
@@ -69,13 +58,10 @@ const priceSchema = new mongoose.Schema({
     state: String,
     market: String
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-// Indexes
+// Compound indexes
 priceSchema.index({ productId: 1, date: -1 });
 priceSchema.index({ marketId: 1, date: -1 });
-priceSchema.index({ date: -1 });
 
 module.exports = mongoose.model('Price', priceSchema);
