@@ -48,7 +48,7 @@ exports.createPrice = async (req, res) => {
     const price = await Price.create({
       ...req.body,
       
-      marketId: req.body.marketId || req.user.businessId
+      marketId: req.body.marketId || req.user.businessId || req.user._id
     });
 
     res.status(201).json({
