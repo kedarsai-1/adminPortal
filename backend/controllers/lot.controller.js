@@ -36,7 +36,7 @@ exports.createLot = async (req, res) => {
   try {
     const lot = await Lot.create({
       ...req.body,
-      businessId: req.user.businessId || req.user._id, // ⭐ FIX
+      businessId: req.user.businessId || req.body.businessId || req.user._id, // ⭐ FIX
       createdBy: req.user._id
     });
 
