@@ -50,6 +50,7 @@ exports.createService = async (req, res) => {
       ...req.body,
       providerId: req.user._id,
       providerName: req.user.name
+      
     });
 
     res.status(201).json({
