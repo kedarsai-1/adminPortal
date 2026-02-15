@@ -46,11 +46,13 @@ exports.getServices = async (req, res) => {
  */
 exports.createService = async (req, res) => {
   try {
+    const businessId = req.body.businessId || req.user.businessId || req.user._id;
+
     const service = await Service.create({
       ...req.body,
       providerId: req.user._id,
-      providerName: req.user.name
-      
+      providerName: req.user.name,
+      businessId: businessId,
     });
 
     res.status(201).json({
@@ -66,7 +68,6 @@ exports.createService = async (req, res) => {
     });
   }
 };
-
 /**
  * @desc    Get service by ID
  * @route   GET /api/services/:id
@@ -84,6 +85,25 @@ exports.getServiceById = async (req, res) => {
       });
     }
 
+    // Non-admin access check: only allow fetch if service belongs to user's business
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin) {
+      const userBusinessId = req.user?.businessId?.toString?.();
+      const userId = req.user?._id?.toString?.();
+      const serviceBusinessId = service.businessId?.toString?.();
+
+      const canAccess =
+        (userBusinessId && serviceBusinessId === userBusinessId) ||
+        (userId && serviceBusinessId === userId);
+
+      if (!canAccess) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+    }
+
     res.json({
       success: true,
       data: service
@@ -96,7 +116,6 @@ exports.getServiceById = async (req, res) => {
     });
   }
 };
-
 /**
  * @desc    Update service
  * @route   PUT /api/services/:id
