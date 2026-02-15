@@ -80,7 +80,17 @@ exports.getPriceById = async (req, res) => {
     const query = { _id: req.params.id };
 
     if (req.user.role !== "admin") {
-      query.marketId = req.user.businessId || req.user._id;
+      const businessId = req.user.businessId;
+      const userId = req.user._id;
+
+      if (businessId && userId) {
+        query.$or = [
+          { marketId: businessId },
+          { marketId: userId }
+        ];
+      } else {
+        query.marketId = businessId || userId;
+      }
     }
 
     const price = await Price.findOne(query);
@@ -105,9 +115,6 @@ exports.getPriceById = async (req, res) => {
     });
   }
 };
-
-
-
 // ==================================================
 // PUT /api/prices/:id
 // ==================================================
